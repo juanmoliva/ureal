@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"ureal/internal/requests"
+	"ureal/pkg/requests"
 
 	flag "github.com/spf13/pflag"
 )
