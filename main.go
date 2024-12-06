@@ -94,8 +94,10 @@ func main() {
 	httpFollowsSameHostRedirectsMutex := sync.RWMutex{}
 
 	domainFollowsWWWRedirects := make(map[string]int)
+	domainFollowsWWWRedirectsMutex := sync.RWMutex{}
 
 	hostErrors := make(map[Host]int)
+	hostErrorsMutex := sync.RWMutex{}
 	yes := 1
 	no := -1
 
@@ -142,13 +144,17 @@ func main() {
 					continue
 				}
 
+				hostErrorsMutex.Lock()
 				if hostErrors[host] == yes {
 
 					if DebugMode {
 						fmt.Println("skipping host because of previous error: ", host)
 					}
+
+					hostErrorsMutex.Unlock()
 					continue
 				}
+				hostErrorsMutex.Unlock()
 
 				// check if www. has same base response
 
@@ -181,10 +187,12 @@ func main() {
 				}
 				httpFollowsSameHostRedirectsMutex.Unlock()
 
+				domainFollowsWWWRedirectsMutex.Lock()
 				if domainFollowsWWWRedirects[host.domain] == yes {
 					u = strings.Replace(u, host.domain, "www."+host.domain, 1)
 					host.domain = "www." + host.domain
 				}
+				domainFollowsWWWRedirectsMutex.Unlock()
 
 				hostBaseResponsesMutex.Lock()
 				if _, ok := hostBaseResponses[host]; !ok {
@@ -224,7 +232,9 @@ func main() {
 							fmt.Println(fmt.Errorf("error making request on base response to %s: %w", host.String()+basePathA, err))
 						}
 
+						hostErrorsMutex.Lock()
 						hostErrors[host] = yes
+						hostErrorsMutex.Unlock()
 
 						hostBaseResponsesMutex.Unlock()
 
@@ -237,14 +247,18 @@ func main() {
 							fmt.Println("final redirect: ", finalRedir)
 						}
 						if strings.Contains(finalRedir, "http://www."+host.domain) || strings.Contains(finalRedir, "https://www."+host.domain) {
+							domainFollowsWWWRedirectsMutex.Lock()
 							domainFollowsWWWRedirects[host.domain] = yes
+							domainFollowsWWWRedirectsMutex.Unlock()
 
 							if DebugMode {
 								fmt.Println("domain follows www redirect: ", host.domain)
 							}
 
 						} else {
+							domainFollowsWWWRedirectsMutex.Lock()
 							domainFollowsWWWRedirects[host.domain] = no
+							domainFollowsWWWRedirectsMutex.Unlock()
 						}
 					}
 
@@ -327,7 +341,28 @@ func main() {
 
 					hostBaseResponses[host] = base404
 
+					rootPathResp, err := httpClients[i].Make(host.String(), httpReqConfig)
+					if err != nil {
+						if DebugMode {
+							fmt.Println(fmt.Errorf("error making request to %s: %w", u, err))
+						}
+						hostBaseResponsesMutex.Unlock()
+						continue
+					}
+
+					out := OutU{
+						Url:           host.String(),
+						StatusCode:    rootPathResp.Status,
+						Words:         len(strings.Fields(string(rootPathResp.Body))),
+						ContentLength: len(rootPathResp.Body),
+						ContentType:   rootPathResp.HTTPHeaders.Get("Content-Type"),
+						FinalReditect: rootPathResp.GetFinalRedirect(),
+					}
+
+					output <- out
+
 				}
+
 				hostBaseResponsesMutex.Unlock()
 
 				// is the url a real one or equal to the base response?
@@ -420,6 +455,7 @@ func main() {
 						Words:         len(strings.Fields(string(resp.Body))),
 						ContentLength: len(resp.Body),
 						ContentType:   resp.HTTPHeaders.Get("Content-Type"),
+						FinalReditect: resp.GetFinalRedirect(),
 					}
 					output <- out
 				}
@@ -512,6 +548,7 @@ type OutU struct {
 	StatusCode    string `json:"status_code"`
 	Words         int    `json:"words"`
 	ContentLength int    `json:"content_length"`
+	FinalReditect string `json:"final_redirect"`
 	ContentType   string `json:"content_type"`
 }
 
@@ -526,7 +563,7 @@ func writeToOutput(outf *os.File, data OutU, silent bool, prettyPrint bool) {
 				print = string(json)
 			}
 		} else {
-			print = fmt.Sprintf("%s - %d words - %d length - %s - %s", data.StatusCode, data.Words, data.ContentLength, data.ContentType, data.Url)
+			print = fmt.Sprintf("%s - %d words - %d length - %s - %s - final redirect: %s", data.StatusCode, data.Words, data.ContentLength, data.ContentType, data.Url, data.FinalReditect)
 		}
 	}
 	if outf != nil {
