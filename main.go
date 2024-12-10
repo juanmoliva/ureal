@@ -56,6 +56,7 @@ func main() {
 	var Output string
 	var PrettyPrint bool
 	var Threads int
+	var Headers []string
 
 	flag.BoolVarP(&DebugMode, "debug", "d", false, "enable debug mode")
 	flag.BoolVarP(&Silent, "silent", "s", false, "silent mode (only output URLs)")
@@ -63,8 +64,19 @@ func main() {
 	flag.StringVarP(&Output, "output", "o", "", "output file")
 	flag.BoolVar(&PrettyPrint, "pretty", false, "output in pretty format (default json lines).")
 	flag.IntVarP(&Threads, "threads", "t", 5, "number of threads, default 5")
+	flag.StringArrayVarP(&Headers, "header", "H", []string{}, "HTTP header to include in the request")
 
 	flag.Parse()
+
+	var HeadersMap = make(map[string]string)
+	for _, h := range Headers {
+		parts := strings.Split(h, ":")
+		if len(parts) != 2 {
+			fmt.Println("Invalid header format, must be key:value")
+			os.Exit(1)
+		}
+		HeadersMap[parts[0]] = parts[1]
+	}
 
 	var outf *os.File
 	// output
@@ -162,8 +174,10 @@ func main() {
 				// check if the host has been checked for same host redirects
 				if host.scheme == "http" {
 					if _, ok := httpFollowsSameHostRedirects[host]; !ok {
+
 						httpReqConfig := requests.HttpReqConfig{
-							HTTPMethod: requests.GET,
+							HTTPMethod:  requests.GET,
+							HTTPHeaders: HeadersMap,
 						}
 
 						httpResp, err := httpClients[i].Make(host.String()+basePathA, httpReqConfig)
@@ -204,7 +218,8 @@ func main() {
 					base404 := Base404ResponseData{}
 
 					httpReqConfig := requests.HttpReqConfig{
-						HTTPMethod: requests.GET,
+						HTTPMethod:  requests.GET,
+						HTTPHeaders: HeadersMap,
 					}
 
 					// requests to
@@ -368,7 +383,8 @@ func main() {
 				// is the url a real one or equal to the base response?
 
 				httpReqConfig := requests.HttpReqConfig{
-					HTTPMethod: requests.GET,
+					HTTPMethod:  requests.GET,
+					HTTPHeaders: HeadersMap,
 				}
 
 				resp, err := httpClients[i].Make(u, httpReqConfig)
