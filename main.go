@@ -371,6 +371,7 @@ func main() {
 						Words:         len(strings.Fields(string(rootPathResp.Body))),
 						ContentLength: len(rootPathResp.Body),
 						ContentType:   rootPathResp.HTTPHeaders.Get("Content-Type"),
+						XssSources:    rootPathResp.GetXssSources(),
 						FinalReditect: rootPathResp.GetFinalRedirect(),
 					}
 
@@ -471,6 +472,7 @@ func main() {
 						Words:         len(strings.Fields(string(resp.Body))),
 						ContentLength: len(resp.Body),
 						ContentType:   resp.HTTPHeaders.Get("Content-Type"),
+						XssSources:    resp.GetXssSources(),
 						FinalReditect: resp.GetFinalRedirect(),
 					}
 					output <- out
@@ -560,12 +562,13 @@ func min(a, b int) int {
 }
 
 type OutU struct {
-	Url           string `json:"url"`
-	StatusCode    string `json:"status_code"`
-	Words         int    `json:"words"`
-	ContentLength int    `json:"content_length"`
-	FinalReditect string `json:"final_redirect"`
-	ContentType   string `json:"content_type"`
+	Url           string        `json:"url"`
+	StatusCode    string        `json:"status_code"`
+	Words         int           `json:"words"`
+	ContentLength int           `json:"content_length"`
+	FinalReditect string        `json:"final_redirect"`
+	XssSources    []interface{} `json:"xss_sources"`
+	ContentType   string        `json:"content_type"`
 }
 
 func writeToOutput(outf *os.File, data OutU, silent bool, prettyPrint bool) {

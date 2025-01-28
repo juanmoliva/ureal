@@ -295,3 +295,25 @@ func IntToBytes(n int) []byte {
 	binary.BigEndian.PutUint32(bytes, uint32(n)) // Use PutUint64 for 64-bit
 	return bytes
 }
+
+func (resp *HttpResponse) GetXssSources() (out []interface{}) {
+	// strings to find xss sources. non case sensitive.
+	domXssStrings := []string{
+		"location.search",
+		"location.hash",
+		"searchparam",
+		"urlsearch",
+		"urlparam",
+		"postmessage",
+		"istener('message",
+		"istener(\"message)",
+	}
+
+	for _, domXssString := range domXssStrings {
+		if strings.Contains(strings.ToLower(string(resp.Body)), domXssString) {
+			out = append(out, domXssString)
+		}
+	}
+
+	return out
+}
