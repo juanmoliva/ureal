@@ -371,8 +371,12 @@ func main() {
 						Words:         len(strings.Fields(string(rootPathResp.Body))),
 						ContentLength: len(rootPathResp.Body),
 						ContentType:   rootPathResp.HTTPHeaders.Get("Content-Type"),
-						XssSources:    rootPathResp.GetXssSources(),
 						FinalReditect: rootPathResp.GetFinalRedirect(),
+					}
+
+					xssSources := rootPathResp.GetXssSources()
+					if len(xssSources) > 0 {
+						out.XssSources = xssSources
 					}
 
 					output <- out
@@ -466,15 +470,21 @@ func main() {
 				}
 
 				if realone {
+
 					out := OutU{
 						Url:           u,
 						StatusCode:    resp.Status,
 						Words:         len(strings.Fields(string(resp.Body))),
 						ContentLength: len(resp.Body),
 						ContentType:   resp.HTTPHeaders.Get("Content-Type"),
-						XssSources:    resp.GetXssSources(),
 						FinalReditect: resp.GetFinalRedirect(),
 					}
+
+					xssSources := resp.GetXssSources()
+					if len(xssSources) > 0 {
+						out.XssSources = xssSources
+					}
+
 					output <- out
 				}
 
