@@ -296,7 +296,12 @@ func IntToBytes(n int) []byte {
 	return bytes
 }
 
-func (resp *HttpResponse) GetXssSources() (out []interface{}) {
+type DomXssSource struct {
+	Source string
+	Count  int
+}
+
+func (resp *HttpResponse) GetXssSources() (out []DomXssSource) {
 	// strings to find xss sources. non case sensitive.
 	domXssStrings := []string{
 		"location.search",
@@ -310,8 +315,12 @@ func (resp *HttpResponse) GetXssSources() (out []interface{}) {
 	}
 
 	for _, domXssString := range domXssStrings {
+		count := strings.Count(strings.ToLower(string(resp.Body)), domXssString)
 		if strings.Contains(strings.ToLower(string(resp.Body)), domXssString) {
-			out = append(out, domXssString)
+			out = append(out, DomXssSource{
+				Source: domXssString,
+				Count:  count,
+			})
 		}
 	}
 

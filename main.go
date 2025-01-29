@@ -562,13 +562,13 @@ func min(a, b int) int {
 }
 
 type OutU struct {
-	Url           string        `json:"url"`
-	StatusCode    string        `json:"status_code"`
-	Words         int           `json:"words"`
-	ContentLength int           `json:"content_length"`
-	FinalReditect string        `json:"final_redirect"`
-	XssSources    []interface{} `json:"xss_sources"`
-	ContentType   string        `json:"content_type"`
+	Url           string                  `json:"url"`
+	StatusCode    string                  `json:"status_code"`
+	Words         int                     `json:"words"`
+	ContentLength int                     `json:"content_length"`
+	FinalReditect string                  `json:"final_redirect"`
+	XssSources    []requests.DomXssSource `json:"xss_sources"`
+	ContentType   string                  `json:"content_type"`
 }
 
 func writeToOutput(outf *os.File, data OutU, silent bool, prettyPrint bool) {
